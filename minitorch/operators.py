@@ -79,7 +79,7 @@ def lt(x: float, y: float) -> float:
         A boolean representing whether x is less than y.
 
     """
-    return float(x < y)
+    return 1.0 if x < y else 0.0
 
 
 def eq(x: float, y: float) -> float:
@@ -95,7 +95,7 @@ def eq(x: float, y: float) -> float:
         A boolean representing whether x is equal to y.
 
     """
-    return float(x == y)
+    return 1.0 if x == y else 0.0
 
 
 def max(x: float, y: float) -> float:
@@ -252,7 +252,7 @@ def relu(x: float) -> float:
         A float representing the rectified linear unit of x.
 
     """
-    return float(max(0.0, x))
+    return float(x) if x > 0.0 else 0.0
 
 
 def relu_back(x: float, d: float) -> float:
