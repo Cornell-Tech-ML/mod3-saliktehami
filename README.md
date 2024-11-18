@@ -401,36 +401,7 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 
 ---
 
-### **Diagnostics Output**
-Diagnostics were run using:
-
-```bash
-python project/parallel_check.py
-```
-
-Here’s a sample output of loop fusion and optimization strategies:
-
-#### Example: `tensor_map`
-- Loops fused for optimization.
-- Memory allocation hoisted for better parallel performance.
-- Optimized parallel structure:
-
-```python
-for i in prange(len(out)):
-    out_index = np.zeros(MAX_DIMS, np.int16)
-    in_index = np.zeros(MAX_DIMS, np.int16)
-    to_index(i, out_shape, out_index)
-    broadcast_index(out_index, out_shape, in_shape, in_index)
-    o = index_to_position(out_index, out_strides)
-    j = index_to_position(in_index, in_strides)
-    out[o] = fn(in_storage[j])
-```
-
-Refer to the full diagnostic log in the [docs](https://minitorch.github.io/diagnostics).
-
----
-
-## Results
+## 3.5 Results
 
 ### **Simple Dataset**
 
