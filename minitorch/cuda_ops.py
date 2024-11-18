@@ -170,35 +170,39 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Calculate thread and block indices
+        # Thread identifiers
         tid = cuda.threadIdx.x
         bid = cuda.blockIdx.x
         bdim = cuda.blockDim.x
-        
-        # Calculate global thread index with grid-stride loop
+
+        # Calculate global thread index and grid-stride loop parameters
         pos = bid * bdim + tid
         stride = bdim * cuda.gridDim.x
-        
+
         # Shared memory for index calculations
         out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        
-        # Grid-stride loop for better work distribution
-        while pos < out_size:
-            # Convert linear position to tensor indices
+        in_index = cuda.local.array(MAX_DIMS, numba.int32)
+
+        # Grid-stride loop for work distribution
+        while pos < len(out):
+            # Compute output tensor index
             to_index(pos, out_shape, out_index)
             
-            # Calculate input and output positions in one go
-            in_pos = index_to_position(out_index, in_strides)
-            out_pos = index_to_position(out_index, out_strides)
+            # Compute corresponding input tensor index via broadcasting
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            
+            # Calculate linear positions
+            o = index_to_position(out_index, out_strides)
+            j = index_to_position(in_index, in_strides)
             
             # Apply function and store result
-            out[out_pos] = fn(in_storage[in_pos])
+            out[o] = fn(in_storage[j])
             
-            # Move to next position with grid stride
+            # Advance position with grid-stride
             pos += stride
 
+    # Compile with CUDA JIT
     return cuda.jit()(_map)  # type: ignore
-
 
 def tensor_zip(
     fn: Callable[[float, float], float],
