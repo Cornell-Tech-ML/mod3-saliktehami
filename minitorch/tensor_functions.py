@@ -272,7 +272,7 @@ class Sigmoid(Function):
         Args:
         ----
             ctx (Context): Context object.
-            a (Tensor): Input tensor.
+            t1 (Tensor): Input tensor.
 
         Returns:
         -------
@@ -309,7 +309,7 @@ class ReLU(Function):
         Args:
         ----
             ctx (Context): Context object.
-            a (Tensor): Input tensor.
+            t1 (Tensor): Input tensor.
 
         Returns:
         -------
@@ -345,7 +345,7 @@ class Log(Function):
         Args:
         ----
             ctx (Context): Context object.
-            a (Tensor): Input tensor.
+            t1 (Tensor): Input tensor.
 
         Returns:
         -------
@@ -382,7 +382,7 @@ class Exp(Function):
         Args:
         ----
             ctx (Context): Context object.
-            a (Tensor): Input tensor.
+            t1 (Tensor): Input tensor.
 
         Returns:
         -------
@@ -419,7 +419,7 @@ class Sum(Function):
         Args:
         ----
             ctx (Context): Context object.
-            t1 (Tensor): Input tensor.
+            a (Tensor): Input tensor.
             dim (Optional[Tensor]): Dimension along which to sum.
 
         Returns:
@@ -429,8 +429,9 @@ class Sum(Function):
         """
         ctx.save_for_backward(a.shape, dim)
         return a.f.add_reduce(a, int(dim.item()))
+
     @staticmethod
-    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, ...]:
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Backward pass for summation.
 
         Args:
@@ -564,9 +565,7 @@ class Permute(Function):
 
         """
         ctx.save_for_backward(order)
-        return a._new(
-            a._tensor.permute(*[int(order[i]) for i in range(order.size)])
-        )
+        return a._new(a._tensor.permute(*[int(order[i]) for i in range(order.size)]))
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:

@@ -33,13 +33,17 @@ UserStrides: TypeAlias = Sequence[int]
 
 
 def index_to_position(index: Index, strides: Strides) -> int:
-    """
-    Converts a multidimensional tensor `index` into a single-dimensional position in storage based on strides.
+    """Converts a multidimensional tensor index into a single-dimensional position in storage based on strides.
+
     Args:
-        index: index tuple of ints
-        strides: tensor strides
+    ----
+        index (Index): Index tuple of ints representing the position in the tensor
+        strides (Strides): Tensor strides indicating the number of elements to step in each dimension
+
     Returns:
-        Position in storage
+    -------
+        int: Position in the storage array
+
     """
     # ASSIGN2.1
     position = 0
@@ -50,14 +54,16 @@ def index_to_position(index: Index, strides: Strides) -> int:
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
-    """
-    Convert an `ordinal` to an index in the `shape`.
+    """Convert an `ordinal` to an index in the `shape`.
     Should ensure that enumerating position 0 ... size of a tensor produces every index exactly once.
     It may not be the inverse of `index_to_position`.
+
     Args:
+    ----
         ordinal: ordinal position to convert.
         shape: tensor shape.
         out_index: return index corresponding to position.
+
     """
     # ASSIGN2.1
     cur_ord = ordinal + 0
@@ -68,21 +74,25 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
     # END ASSIGN2.1
 
 
-
 def broadcast_index(
     big_index: Index, big_shape: Shape, shape: Shape, out_index: OutIndex
 ) -> None:
-    """
-    Convert a `big_index` into `big_shape` to a smaller `out_index` into `shape` following broadcasting rules.
-    In this case it may be larger or with more dimensions than the `shape` given.
+    """Convert a 'big_index' into 'big_shape' to a smaller 'out_index' into 'shape' following broadcasting rules.
+
+    In this case it may be larger or with more dimensions than the 'shape' given.
     Additional dimensions may need to be mapped to 0 or removed.
+
     Args:
-        big_index: multidimensional index of bigger tensor
-        big_shape: tensor shape of bigger tensor
-        shape: tensor shape of smaller tensor
-        out_index: multidimensional index of smaller tensor
+    ----
+        big_index (Index): Multidimensional index of the bigger tensor
+        big_shape (Shape): Tensor shape of the bigger tensor
+        shape (Shape): Tensor shape of the smaller tensor
+        out_index (OutIndex): Output index buffer to be filled with the broadcast result
+
     Returns:
-        None
+    -------
+        None: Fills in the out_index buffer
+
     """
     # ASSIGN2.2
     for i, s in enumerate(shape):
@@ -94,17 +104,22 @@ def broadcast_index(
     # END ASSIGN2.2
 
 
-
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
-    """
-    Broadcast two shapes to create a new union shape.
+    """Broadcast two shapes to create a new union shape.
+
     Args:
-        shape1: first shape
-        shape2: second shape
+    ----
+        shape1 (UserShape): First shape to be broadcast
+        shape2 (UserShape): Second shape to be broadcast
+
     Returns:
-        broadcasted shape
+    -------
+        UserShape: The resulting broadcast shape
+
     Raises:
-        IndexingError: if cannot broadcast
+    ------
+        IndexingError: If shapes cannot be broadcast together
+
     """
     # ASSIGN2.2
     a, b = shape1, shape2
@@ -125,7 +140,6 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
                 raise IndexingError(f"Broadcast failure {a} {b}")
     return tuple(reversed(c_rev))
     # END ASSIGN2.2
-
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
@@ -299,14 +313,16 @@ class TensorData:
         return (self._storage, self._shape, self._strides)
 
     def permute(self, *order: int) -> TensorData:
-        """
-        Permute the dimensions of the tensor.
+        """Permute the dimensions of the tensor.
+
         Args:
         ----
             order (list): a permutation of the dimensions
+
         Returns:
         -------
             New `TensorData` with the same storage and a new dimension order.
+
         """
         assert list(sorted(order)) == list(
             range(len(self.shape))
@@ -314,12 +330,11 @@ class TensorData:
         # ASSIGN2.1
         return TensorData(
             self._storage,
-        tuple([self.shape[o] for o in order]),
-        tuple([self._strides[o] for o in order]),
-    )
+            tuple([self.shape[o] for o in order]),
+            tuple([self._strides[o] for o in order]),
+        )
+
     # END ASSIGN2.1
-
-
 
     def to_string(self) -> str:
         """Convert to string"""

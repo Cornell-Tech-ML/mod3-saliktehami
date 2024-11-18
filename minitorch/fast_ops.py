@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing import Callable, Optional
 
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 # TIP: Use `NUMBA_DISABLE_JIT=1 pytest tests/ -m task3_1` to run these tests without JIT.
 
@@ -30,6 +30,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator to JIT a function."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -172,12 +173,13 @@ def tensor_map(
             # Create thread-local indices inside the parallel loop
             out_index = np.empty(MAX_DIMS, np.int32)
             in_index = np.empty(MAX_DIMS, np.int32)
-            
+
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             o = index_to_position(out_index, out_strides)
             j = index_to_position(in_index, in_strides)
             out[o] = fn(in_storage[j])
+
     return njit(_map, parallel=True)  # type: ignore
 
 
@@ -220,7 +222,7 @@ def tensor_zip(
             out_index = np.empty(MAX_DIMS, np.int32)
             a_index = np.empty(MAX_DIMS, np.int32)
             b_index = np.empty(MAX_DIMS, np.int32)
-            
+
             to_index(i, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
             broadcast_index(out_index, out_shape, a_shape, a_index)
@@ -264,25 +266,26 @@ def tensor_reduce(
     ) -> None:
         out_index = np.zeros(MAX_DIMS, np.int32)
         reduce_size = a_shape[reduce_dim]
-    
-    # Parallelize the outer loop over output elements
+
+        # Parallelize the outer loop over output elements
         for i in prange(len(out)):
             # Thread-local indices
             out_index = np.empty(MAX_DIMS, np.int32)
             local_index = np.empty(MAX_DIMS, np.int32)
-            
+
             to_index(i, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
-            
+
             # Copy indices to local
             for j in range(len(out_shape)):
                 local_index[j] = out_index[j]
-                
+
             # Sequential reduction
             for s in range(reduce_size):
                 local_index[reduce_dim] = s
                 j = index_to_position(local_index, a_strides)
                 out[o] = fn(out[o], a_storage[j])
+
     return njit(_reduce, parallel=True)  # type: ignore
 
 
@@ -298,19 +301,18 @@ def _tensor_matrix_multiply(
     b_strides: Strides,
 ) -> None:
     """NUMBA tensor matrix multiply function."""
-    
     # Basic compatibility check
     assert a_shape[-1] == b_shape[-2]
-    
+
     # Get batch strides (0 if not batched)
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
     # Get key dimensions
-    batch_size = max(out_shape[0], 1)    # Number of batches
-    M = out_shape[1]                     # Rows in output
-    N = out_shape[2]                     # Cols in output
-    K = a_shape[-1]                      # Shared dimension (cols in A, rows in B)
+    batch_size = max(out_shape[0], 1)  # Number of batches
+    M = out_shape[1]  # Rows in output
+    N = out_shape[2]  # Cols in output
+    K = a_shape[-1]  # Shared dimension (cols in A, rows in B)
 
     # Parallel over both batch and M dimensions for better utilization
     for batch in prange(batch_size):
@@ -318,27 +320,28 @@ def _tensor_matrix_multiply(
         a_batch_offset = batch * a_batch_stride
         b_batch_offset = batch * b_batch_stride
         out_batch_offset = batch * out_strides[0]
-        
+
         for i in prange(M):
             # Calculate row offset for A once per i
             a_row_offset = a_batch_offset + i * a_strides[1]
-            
+
             for j in range(N):
                 # Calculate final output position
                 out_idx = out_batch_offset + i * out_strides[1] + j * out_strides[2]
-                
+
                 # Initialize accumulator
                 acc = 0.0
-                
+
                 # Inner product loop - single multiply per iteration
                 for k in range(K):
                     # Calculate positions with minimal operations
                     a_pos = a_row_offset + k * a_strides[2]
                     b_pos = b_batch_offset + k * b_strides[1] + j * b_strides[2]
                     acc += a_storage[a_pos] * b_storage[b_pos]
-                
+
                 # Single write to global memory
                 out[out_idx] = acc
+
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None

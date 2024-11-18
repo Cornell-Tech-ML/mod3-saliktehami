@@ -399,7 +399,6 @@ class Tensor:
         else:
             return self.sum() / self.size
 
-
     def permute(self, *order: int) -> Tensor:
         """Permute the dimensions of the tensor"""
         return Permute.apply(self, tensor(list(order)))
