@@ -405,8 +405,31 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-    # TODO: Implement for Task 3.3.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    
+    # Shared memory for tiles
+    a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    
+    # Thread indices
+    i = cuda.threadIdx.x
+    j = cuda.threadIdx.y
+    
+    # Bounds check
+    if i >= size or j >= size:
+        return
+        
+    # Load matrices into shared memory
+    a_shared[i, j] = a[size * i + j]
+    b_shared[i, j] = b[size * i + j]
+    cuda.syncthreads()
+    
+    # Compute matrix multiplication
+    accum = 0.0
+    for k in range(size):
+        accum += a_shared[i, k] * b_shared[k, j]
+        
+    # Write result
+    out[size * i + j] = accum
 
 
 jit_mm_practice = jit(_mm_practice)
@@ -452,30 +475,62 @@ def _tensor_matrix_multiply(
     Returns:
         None : Fills in `out`
     """
+    # Block and grid configuration
+    BLOCK_DIM = 32
+    
+    # Handle batch dimension with broadcasting
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
-    # Batch dimension - fixed
     batch = cuda.blockIdx.z
-
-    BLOCK_DIM = 32
+    
+    # Shared memory allocation for tiles
     a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-
-    # The final position c[i, j]
+    
+    # Global indices (position in output matrix)
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
-
-    # The local position in the block.
+    
+    # Local thread indices (position in shared memory tile)
     pi = cuda.threadIdx.x
     pj = cuda.threadIdx.y
-
-    # Code Plan:
-    # 1) Move across shared dimension by block dim.
-    #    a) Copy into shared memory for a matrix.
-    #    b) Copy into shared memory for b matrix
-    #    c) Compute the dot produce for position c[i, j]
-    # TODO: Implement for Task 3.4.
-    raise NotImplementedError("Need to implement for Task 3.4")
+    
+    # Accumulator for dot product
+    accum = 0.0
+    
+    # Iterate over tiles in the shared dimension
+    for phase in range(0, a_shape[2], BLOCK_DIM):
+        # Load tile from matrix A into shared memory
+        k = phase + pj
+        if i < a_shape[1] and k < a_shape[2]:
+            a_pos = batch * a_batch_stride + i * a_strides[1] + k * a_strides[2]
+            a_shared[pi, pj] = a_storage[a_pos]
+        else:
+            a_shared[pi, pj] = 0.0
+            
+        # Load tile from matrix B into shared memory
+        k = phase + pi
+        if k < b_shape[1] and j < b_shape[2]:
+            b_pos = batch * b_batch_stride + k * b_strides[1] + j * b_strides[2]
+            b_shared[pi, pj] = b_storage[b_pos]
+        else:
+            b_shared[pi, pj] = 0.0
+            
+        # Ensure all threads have loaded their data
+        cuda.syncthreads()
+        
+        # Compute dot product for this tile
+        if i < out_shape[1] and j < out_shape[2]:
+            for k in range(min(BLOCK_DIM, a_shape[2] - phase)):
+                accum += a_shared[pi, k] * b_shared[k, pj]
+                
+        # Sync before next iteration
+        cuda.syncthreads()
+    
+    # Write result to global memory
+    if i < out_shape[1] and j < out_shape[2]:
+        out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+        out[out_pos] = accum
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
