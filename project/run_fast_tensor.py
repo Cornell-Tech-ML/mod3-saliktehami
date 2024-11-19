@@ -8,10 +8,32 @@ FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 if numba.cuda.is_available():
     GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
 
+epoch_results = []
 
 def default_log_fn(epoch, total_loss, correct, losses, time):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "total time", round(time, 4), "time per epoch", round(time / (epoch + 1), 4))
+    # Calculate time per epoch
+    time_per_epoch = time / (epoch + 1)
+    
+    # Log to the console for the current epoch
+    print(
+        f"Epoch {epoch}   loss {round(total_loss, 4)}  correct {correct}  total time {round(time, 4)}  time per epoch {round(time_per_epoch, 4)}"
+    )
+    
+    # Append to the results for summary later
+    epoch_results.append(
+        (epoch, round(total_loss, 4), correct, round(time_per_epoch, 4))
+    )
 
+def print_final_results():
+    print("\nFinal Results:\n")
+    for epoch, loss, correct, time_per_epoch in epoch_results:
+        print(f"Epoch {epoch}   loss {loss}  correct {correct}  time per epoch {time_per_epoch}")
+    
+    # Print results as a table
+    print("\n| Epoch | Loss         | Accuracy | Time per Epoch (s) |")
+    print("|-------|--------------|----------|---------------------|")
+    for epoch, loss, correct, time_per_epoch in epoch_results:
+        print(f"| {epoch:<5} | {loss:<12} | {correct:<8} | {time_per_epoch:<19} |")
 
 def RParam(*shape, backend):
     r = minitorch.rand(shape, backend=backend) - 0.5
@@ -100,7 +122,7 @@ class FastTrain:
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
 
                 log_fn(epoch, total_loss, correct, losses, total_time)
-        print("Total time: ", round(total_time,4), "Epoch Duration: ", round(total_time / max_epochs , 4))
+        print_final_results
 
 
 if __name__ == "__main__":
