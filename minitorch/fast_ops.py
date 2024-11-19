@@ -332,36 +332,41 @@ def _tensor_matrix_multiply(
         None : Fills in out
 
     """
-    a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
-    b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
+    # Get the batch stride (0 if broadcasting)
+    a_batch_stride = a_strides[0] if len(a_shape) > 2 and a_shape[0] > 1 else 0
+    b_batch_stride = b_strides[0] if len(b_shape) > 2 and b_shape[0] > 1 else 0
+    
+    # Get the contraction dimension (inner dimension for matrix multiply)
     blocks = a_shape[-1]
-    # Iterate over the output matrix
-    for row_i in prange(0, out_shape[0]):
-        for col_j in range(0, out_shape[1]):
-            for block_k in range(0, out_shape[2]):
-                # Calculate the starting storage positions for a and b
-                row_s = row_i * a_batch_stride + col_j * a_strides[1]
-                col_s = row_i * b_batch_stride + block_k * b_strides[2]
-
-                # Initialize temporary sum
+    
+    # Get matrix dimensions
+    batch = out_shape[0] if len(out_shape) > 2 else 1
+    rows = out_shape[-2]
+    cols = out_shape[-1]
+    
+    # Main computation loop
+    for batch_idx in prange(batch):
+        for i in range(rows):
+            for j in range(cols):
+                # Calculate starting positions
+                a_pos = batch_idx * a_batch_stride + i * a_strides[-2]
+                b_pos = batch_idx * b_batch_stride + j * b_strides[-1]
+                
+                # Initialize accumulator
                 temp = 0.0
-
-                # Iterate over the inner dimension of the matrix multiplication
-                for _ in range(0, blocks):
-                    # Multiply the two elements and add to the temporary sum
-                    temp += a_storage[row_s] * b_storage[col_s]
-
-                    # Move to the next element in the row of a and b
-                    row_s += a_strides[-1]
-                    col_s += b_strides[-2]
-
-                # Store the result in the output matrix
-                out[
-                    row_i * out_strides[0]
-                    + col_j * out_strides[1]
-                    + block_k * out_strides[2]
-                ] = temp
-
+                
+                # Inner product loop
+                for _ in range(blocks):
+                    temp += a_storage[a_pos] * b_storage[b_pos]
+                    # Move to next position in contraction dimension
+                    a_pos += a_strides[-1]
+                    b_pos += b_strides[-2]
+                
+                # Store result
+                out_pos = (
+                    batch_idx * out_strides[0] if len(out_shape) > 2 else 0
+                ) + i * out_strides[-2] + j * out_strides[-1]
+                out[out_pos] = temp
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None

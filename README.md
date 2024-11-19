@@ -718,9 +718,6 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 ```bash
 !python project/run_fast_tensor.py --BACKEND gpu --HIDDEN 200 --DATASET xor --RATE 0.05
 ```
-
-# GPU XOR Dataset Metrics
-
 | Epoch | Loss                 | Correct | Time per Epoch (s) | Total Time (s) |
 |-------|----------------------|---------|---------------------|----------------|
 |   0   | 6.235867686996221    | 24      | 4.4809             | 4.4809         |
