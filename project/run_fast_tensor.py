@@ -11,28 +11,7 @@ if numba.cuda.is_available():
 epoch_results = []
 
 def default_log_fn(epoch, total_loss, correct, losses, time):
-    # Calculate epoch index and time per epoch
-    epoch_number = epoch
-    time_per_epoch = time / epoch_number
-
-    # Log to the console for the current epoch
-    #print(
-        #f"{round(time, 4)}  {epoch_number} {round(total_loss, 4)} {correct} {round(time_per_epoch, 4)}"
-    #)
-
-    # Append to the results for summary later
-    epoch_results.append(
-        f"Epoch {epoch_number-1}   loss {round(total_loss, 4)}  correct {correct}  total time {round(time, 4)}  time per epoch {round(time_per_epoch, 4)}"
-    )
-
-def print_final_results():
-    print("\nFinal Results:\n")
-    
-    # Print results as a table
-    print("\n| Total Time (s) | Epoch | Loss         | Accuracy | Time per Epoch (s) |")
-    print("|----------------|-------|--------------|----------|---------------------|")
-    for total_time, epoch, loss, correct, time_per_epoch in epoch_results:
-        print(f"| {total_time:<14} | {epoch:<5} | {loss:<12} | {correct:<8} | {time_per_epoch:<19} |")
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "total time", round(time, 4), "time per epoch", round(time / (epoch + 1), 4))
 
 def RParam(*shape, backend):
     r = minitorch.rand(shape, backend=backend) - 0.5
@@ -121,7 +100,7 @@ class FastTrain:
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
 
                 log_fn(epoch, total_loss, correct, losses, total_time)
-    print_final_results()
+    print("Total time: ", round(total_time,4), "Epoch Duration: ", round(total_time / max_epochs , 4))
 
 
 if __name__ == "__main__":
