@@ -17,7 +17,7 @@ def default_log_fn(epoch, total_loss, correct, losses, time):
 
     # Log to the console for the current epoch
     print(
-        f"Epoch {epoch_number}   loss {round(total_loss, 4)}  correct {correct}  total time {round(time, 4)}  time per epoch {round(time_per_epoch, 4)}"
+        f"{round(time, 4)}  {epoch_number} {round(total_loss, 4)} {correct} {round(time_per_epoch, 4)}"
     )
 
     # Append to the results for summary later
