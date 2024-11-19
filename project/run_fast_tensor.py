@@ -12,7 +12,7 @@ epoch_results = []
 
 def default_log_fn(epoch, total_loss, correct, losses, time):
     # Calculate epoch index and time per epoch
-    epoch_number = epoch + 1
+    epoch_number = epoch
     time_per_epoch = time / epoch_number
 
     # Log to the console for the current epoch
