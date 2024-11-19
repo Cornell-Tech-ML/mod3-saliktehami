@@ -114,7 +114,7 @@ class FastTrain:
             time_seconds = time.time() - start_time
             total_time += time_seconds
             # Logging
-            if epoch % 10 == 0 or epoch == max_epochs - 1:
+            if epoch % 10 == 0:
                 X = minitorch.tensor(data.X, backend=self.backend)
                 y = minitorch.tensor(data.y, backend=self.backend)
                 out = self.model.forward(X).view(y.shape[0])
