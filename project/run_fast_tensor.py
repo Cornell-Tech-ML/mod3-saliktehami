@@ -11,7 +11,7 @@ if numba.cuda.is_available():
 
 
 def default_log_fn(epoch, total_loss, correct, losses):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "total time", round(time, 4), "time per epoch", round(time / (epoch + 1), 4))
 
 
 def RParam(*shape, backend):
@@ -46,7 +46,7 @@ class Linear(minitorch.Module):
     def forward(self, x):
         batch = x @ self.weights.value
         bias = self.bias.value
-        return batch + bias.view(1, bias.shape[0])
+        return batch + bias
 
 class FastTrain:
     def __init__(self, hidden_layers, backend=FastTensorBackend):
@@ -65,7 +65,7 @@ class FastTrain:
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
         BATCH = 10
         losses = []
-
+        total_time = 0.0
         for epoch in range(max_epochs):
             total_loss = 0.0
             c = list(zip(data.X, data.y))
@@ -89,6 +89,8 @@ class FastTrain:
                 optim.step()
 
             losses.append(total_loss)
+            time_seconds = time.time() - start_time
+            total_time += time_seconds
             # Logging
             if epoch % 10 == 0 or epoch == max_epochs:
                 X = minitorch.tensor(data.X, backend=self.backend)
@@ -97,6 +99,7 @@ class FastTrain:
                 y2 = minitorch.tensor(data.y)
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
                 log_fn(epoch, total_loss, correct, losses)
+        print(f"Total time: {total_time}", "Time per Epoch", round(total_time / max_epochs, 4))
 
 
 if __name__ == "__main__":
