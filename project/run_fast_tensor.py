@@ -1,9 +1,6 @@
 import random
-
 import numba
-
 import minitorch
-
 import time
 
 datasets = minitorch.datasets
@@ -12,7 +9,7 @@ if numba.cuda.is_available():
     GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
 
 
-def default_log_fn(epoch, total_loss, correct, losses):
+def default_log_fn(epoch, total_loss, correct, losses, time):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "total time", round(time, 4), "time per epoch", round(time / (epoch + 1), 4))
 
 
@@ -31,9 +28,9 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden, 1, backend)
 
     def forward(self, x):
-        h1 = self.layer1.forward(x).relu()
-        h2 = self.layer2.forward(h1).relu()
-        return self.layer3.forward(h2).sigmoid()
+        middle = self.layer1.forward(x).relu()
+        end = self.layer2.forward(middle).relu()
+        return self.layer3.forward(end).sigmoid()
 
 
 class Linear(minitorch.Module):
@@ -46,9 +43,8 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        batch = x @ self.weights.value
-        bias = self.bias.value
-        return batch + bias
+        return x @ self.weights.value + self.bias.value
+
 
 class FastTrain:
     def __init__(self, hidden_layers, backend=FastTensorBackend):
@@ -63,6 +59,7 @@ class FastTrain:
         return self.model.forward(minitorch.tensor(X, backend=self.backend))
 
     def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
+
         self.model = Network(self.hidden_layers, self.backend)
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
         BATCH = 10
@@ -101,8 +98,9 @@ class FastTrain:
                 out = self.model.forward(X).view(y.shape[0])
                 y2 = minitorch.tensor(data.y)
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
-                log_fn(epoch, total_loss, correct, losses)
-        print(f"Total time: {total_time}", "Time per Epoch", round(total_time / max_epochs, 4))
+
+                log_fn(epoch, total_loss, correct, losses, total_time)
+        print("Total time: ", round(total_time,4), "Epoch Duration: ", round(total_time / max_epochs , 4))
 
 
 if __name__ == "__main__":
@@ -126,9 +124,6 @@ if __name__ == "__main__":
         data = minitorch.datasets["Simple"](PTS)
     elif args.DATASET.lower() == "split":
         data = minitorch.datasets["Split"](PTS)
-    else:
-        raise ValueError(f"Unknown dataset: {args.DATASET}")
-
 
     HIDDEN = int(args.HIDDEN)
     RATE = args.RATE
