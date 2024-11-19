@@ -100,7 +100,7 @@ class FastTrain:
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
 
                 log_fn(epoch, total_loss, correct, losses, total_time)
-    print("Total time: ", round(total_time,4), "Epoch Duration: ", round(total_time / max_epochs , 4))
+        print("Total time: ", round(total_time,4), "Epoch Duration: ", round(total_time / max_epochs , 4))
 
 
 if __name__ == "__main__":
