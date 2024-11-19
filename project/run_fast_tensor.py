@@ -120,7 +120,7 @@ if __name__ == "__main__":
     if args.DATASET.lower() == "xor":
         data = minitorch.datasets["Xor"](PTS)
     elif args.DATASET.lower() == "simple":
-        data = minitorch.datasets["Simple"].simple(PTS)
+        data = minitorch.datasets["Simple"](PTS)
     elif args.DATASET.lower() == "split":
         data = minitorch.datasets["Split"](PTS)
     else:
