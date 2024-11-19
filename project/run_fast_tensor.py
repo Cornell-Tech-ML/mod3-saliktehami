@@ -117,12 +117,15 @@ if __name__ == "__main__":
 
     PTS = args.PTS
 
-    if args.DATASET == "xor":
+    if args.DATASET.lower() == "xor":
         data = minitorch.datasets["Xor"](PTS)
-    elif args.DATASET == "simple":
+    elif args.DATASET.lower() == "simple":
         data = minitorch.datasets["Simple"].simple(PTS)
-    elif args.DATASET == "split":
+    elif args.DATASET.lower() == "split":
         data = minitorch.datasets["Split"](PTS)
+    else:
+        raise ValueError(f"Unknown dataset: {args.DATASET}")
+
 
     HIDDEN = int(args.HIDDEN)
     RATE = args.RATE
