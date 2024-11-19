@@ -325,10 +325,7 @@ class Tensor:
         backpropagate(self, grad_output)
 
     def __truediv__(self, b: TensorLike) -> Tensor:
-        print("\nDIVISION OPERATION:")
-        print(f"Dividing: {self} / {b}")
         result = Mul.apply(self, Inv.apply(self._ensure_tensor(b)))
-        print(f"Result: {result}")
         return result
 
     def __rtruediv__(self, b: TensorLike) -> Tensor:
