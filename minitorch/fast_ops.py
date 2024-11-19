@@ -300,47 +300,67 @@ def _tensor_matrix_multiply(
     b_shape: Shape,
     b_strides: Strides,
 ) -> None:
-    """NUMBA tensor matrix multiply function."""
-    # Basic compatibility check
+    """NUMBA tensor matrix multiply function.
+
+    Should work for any tensor shapes that broadcast as long as
+
+
     assert a_shape[-1] == b_shape[-2]
 
-    # Get batch strides (0 if not batched)
+
+    Optimizations:
+
+    * Outer loop in parallel
+    * No index buffers or function calls
+    * Inner loop should have no global writes, 1 multiply.
+
+
+    Args:
+    ----
+        out (Storage): storage for out tensor
+        out_shape (Shape): shape for out tensor
+        out_strides (Strides): strides for out tensor
+        a_storage (Storage): storage for a tensor
+        a_shape (Shape): shape for a tensor
+        a_strides (Strides): strides for a tensor
+        b_storage (Storage): storage for b tensor
+        b_shape (Shape): shape for b tensor
+        b_strides (Strides): strides for b tensor
+
+    Returns:
+    -------
+        None : Fills in out
+
+    """
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
+    blocks = a_shape[-1]
+    # Iterate over the output matrix
+    for row_i in prange(0, out_shape[0]):
+        for col_j in range(0, out_shape[1]):
+            for block_k in range(0, out_shape[2]):
+                # Calculate the starting storage positions for a and b
+                row_s = row_i * a_batch_stride + col_j * a_strides[1]
+                col_s = row_i * b_batch_stride + block_k * b_strides[2]
 
-    # Get key dimensions
-    batch_size = max(out_shape[0], 1)  # Number of batches
-    M = out_shape[1]  # Rows in output
-    N = out_shape[2]  # Cols in output
-    K = a_shape[-1]  # Shared dimension (cols in A, rows in B)
+                # Initialize temporary sum
+                temp = 0.0
 
-    # Parallel over both batch and M dimensions for better utilization
-    for batch in prange(batch_size):
-        # Calculate batch offsets once per batch
-        a_batch_offset = batch * a_batch_stride
-        b_batch_offset = batch * b_batch_stride
-        out_batch_offset = batch * out_strides[0]
+                # Iterate over the inner dimension of the matrix multiplication
+                for _ in range(0, blocks):
+                    # Multiply the two elements and add to the temporary sum
+                    temp += a_storage[row_s] * b_storage[col_s]
 
-        for i in prange(M):
-            # Calculate row offset for A once per i
-            a_row_offset = a_batch_offset + i * a_strides[1]
+                    # Move to the next element in the row of a and b
+                    row_s += a_strides[-1]
+                    col_s += b_strides[-2]
 
-            for j in range(N):
-                # Calculate final output position
-                out_idx = out_batch_offset + i * out_strides[1] + j * out_strides[2]
-
-                # Initialize accumulator
-                acc = 0.0
-
-                # Inner product loop - single multiply per iteration
-                for k in range(K):
-                    # Calculate positions with minimal operations
-                    a_pos = a_row_offset + k * a_strides[2]
-                    b_pos = b_batch_offset + k * b_strides[1] + j * b_strides[2]
-                    acc += a_storage[a_pos] * b_storage[b_pos]
-
-                # Single write to global memory
-                out[out_idx] = acc
+                # Store the result in the output matrix
+                out[
+                    row_i * out_strides[0]
+                    + col_j * out_strides[1]
+                    + block_k * out_strides[2]
+                ] = temp
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
