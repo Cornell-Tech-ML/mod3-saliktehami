@@ -16,13 +16,13 @@ def default_log_fn(epoch, total_loss, correct, losses, time):
     time_per_epoch = time / epoch_number
 
     # Log to the console for the current epoch
-    print(
-        f"{round(time, 4)}  {epoch_number} {round(total_loss, 4)} {correct} {round(time_per_epoch, 4)}"
-    )
+    #print(
+        #f"{round(time, 4)}  {epoch_number} {round(total_loss, 4)} {correct} {round(time_per_epoch, 4)}"
+    #)
 
     # Append to the results for summary later
     epoch_results.append(
-        (round(time, 4), epoch_number, round(total_loss, 4), correct, round(time_per_epoch, 4))
+        f"Epoch {epoch_number-1}   loss {round(total_loss, 4)}  correct {correct}  total time {round(time, 4)}  time per epoch {round(time_per_epoch, 4)}"
     )
 
 def print_final_results():
