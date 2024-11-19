@@ -114,7 +114,7 @@ class FastTrain:
             time_seconds = time.time() - start_time
             total_time += time_seconds
             # Logging
-            if epoch % 10 == 0 or epoch == max_epochs:
+            if epoch % 10 == 0 or epoch == max_epochs - 1:
                 X = minitorch.tensor(data.X, backend=self.backend)
                 y = minitorch.tensor(data.y, backend=self.backend)
                 out = self.model.forward(X).view(y.shape[0])
@@ -122,7 +122,7 @@ class FastTrain:
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
 
                 log_fn(epoch, total_loss, correct, losses, total_time)
-        print_final_results
+    print_final_results
 
 
 if __name__ == "__main__":
