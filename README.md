@@ -389,15 +389,17 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 ## 3.4 Parallelization and Performance
 
 ### **Matrix Multiplication: CPU vs. CUDA**
-- **Small Matrices**: Naive CPU implementation is faster due to lower overhead.
-- **Medium Matrices**: CUDA starts to outperform at sizes like `16x16` or `32x32`.
-- **Large Matrices**: CUDA demonstrates significant speedup for matrices like `256x256`.
+![Microsoft Edge 2024-11-20 15 29 49](https://github.com/user-attachments/assets/5cf6a164-ea83-4f84-b260-b6febd38f0dd)
 
-| Matrix Size  | CPU Time (s) | CUDA Time (s) | Speedup |
-|--------------|--------------|---------------|---------|
-| 4x4          | Fast         | Slow          | -       |
-| 16x16        | Moderate     | Fast          | 1.5x    |
-| 256x256      | 242.58       | 0.86          | ~282x   |
+| Matrix Size | CPU Time (s) | GPU Time (s) | Speedup |
+|------------|--------------|--------------|---------|
+| 64x64      | 0.00373      | 0.00696      | 0.54x   |
+| 128x128    | 0.01487      | 0.01513      | 0.98x   |
+| 256x256    | 0.07429      | 0.05264      | 1.41x   |
+| 512x512    | 0.64368      | 0.20876      | 3.08x   |
+| 1024x1024  | 4.29199      | 0.85038      | 5.05x   |
+
+*Note*: Tests run on Google Colab GPU runtime. GPU starts showing significant speedup at matrix sizes larger than 256x256, achieving a 5x speedup at 1024x1024.*
 
 ---
 
