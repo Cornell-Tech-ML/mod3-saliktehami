@@ -12,6 +12,9 @@ from .tensor_data import (
     index_to_position,
     shape_broadcast,
     to_index,
+    Shape,
+    Storage,
+    Strides,
 )
 from .tensor_ops import MapProto, TensorOps
 
@@ -19,7 +22,7 @@ if TYPE_CHECKING:
     from typing import Callable, Optional
 
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 # TIP: Use `NUMBA_DISABLE_JIT=1 pytest tests/ -m task3_1` to run these tests without JIT.
 
@@ -335,15 +338,15 @@ def _tensor_matrix_multiply(
     # Get the batch stride (0 if broadcasting)
     a_batch_stride = a_strides[0] if len(a_shape) > 2 and a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if len(b_shape) > 2 and b_shape[0] > 1 else 0
-    
+
     # Get the contraction dimension (inner dimension for matrix multiply)
     blocks = a_shape[-1]
-    
+
     # Get matrix dimensions
     batch = out_shape[0] if len(out_shape) > 2 else 1
     rows = out_shape[-2]
     cols = out_shape[-1]
-    
+
     # Main computation loop
     for batch_idx in prange(batch):
         for i in range(rows):
@@ -351,22 +354,25 @@ def _tensor_matrix_multiply(
                 # Calculate starting positions
                 a_pos = batch_idx * a_batch_stride + i * a_strides[-2]
                 b_pos = batch_idx * b_batch_stride + j * b_strides[-1]
-                
+
                 # Initialize accumulator
                 temp = 0.0
-                
+
                 # Inner product loop
                 for _ in range(blocks):
                     temp += a_storage[a_pos] * b_storage[b_pos]
                     # Move to next position in contraction dimension
                     a_pos += a_strides[-1]
                     b_pos += b_strides[-2]
-                
+
                 # Store result
                 out_pos = (
-                    batch_idx * out_strides[0] if len(out_shape) > 2 else 0
-                ) + i * out_strides[-2] + j * out_strides[-1]
+                    (batch_idx * out_strides[0] if len(out_shape) > 2 else 0)
+                    + i * out_strides[-2]
+                    + j * out_strides[-1]
+                )
                 out[out_pos] = temp
+
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None
