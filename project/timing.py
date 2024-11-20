@@ -1,113 +1,108 @@
+import random
+from collections import defaultdict
 import minitorch
 import time
+import sys
 import numpy as np
-import matplotlib.pyplot as plt
-from tabulate import tabulate  # for nice tables
+#New
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
 
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
 
+
 def run_matmul(backend, size=16) -> None:
-    """Run a single matrix multiplication benchmark."""
     batch_size = 2
+
     x = minitorch.rand((batch_size, size, size), backend=backend)
     y = minitorch.rand((batch_size, size, size), backend=backend)
     z = x @ y
 
-def plot_results(times, save_path='matmul_benchmark.png'):
-    """Create a publication-quality plot of benchmark results."""
+##NEW
+def plot_results(times):
+    if not MATPLOTLIB_AVAILABLE:
+        print("\nMatplotlib not available, skipping plot generation")
+        return
+    
     sizes = list(times.keys())
-    cpu_times = [times[size]["fast"] for size in sizes]
+    fast_times = [times[size]["fast"] for size in sizes]
     gpu_times = [times[size]["gpu"] for size in sizes]
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(sizes, fast_times, 'b-o', label='CPU (Fast)')
+    plt.plot(sizes, gpu_times, 'r-o', label='GPU (CUDA)')
+    plt.xlabel('Matrix Size')
+    plt.ylabel('Time (seconds)')
+    plt.title('Matrix Multiplication Performance: CPU vs GPU')
+    plt.legend()
+    plt.grid(True)
+    try:
+        plt.savefig('matmul_benchmark.png')
+    except Exception as e:
+        print(f"\nError saving plot: {e}")
+    plt.close()
 
-    plt.style.use('seaborn')  # Use a nicer style
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+def calculate_speedup(times):
+    speedups = {}
+    for size in times:
+        speedups[size] = times[size]["fast"] / times[size]["gpu"]
+    return speedups
 
-    # Regular scale plot
-    ax1.plot(sizes, cpu_times, 'b-o', label='CPU', linewidth=2, markersize=8)
-    ax1.plot(sizes, gpu_times, 'r-o', label='GPU', linewidth=2, markersize=8)
-    ax1.set_xlabel('Matrix Size')
-    ax1.set_ylabel('Time (seconds)')
-    ax1.set_title('Matrix Multiplication Performance\n(Linear Scale)')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-
-    # Log scale plot
-    ax2.plot(sizes, cpu_times, 'b-o', label='CPU', linewidth=2, markersize=8)
-    ax2.plot(sizes, gpu_times, 'r-o', label='GPU', linewidth=2, markersize=8)
-    ax2.set_xlabel('Matrix Size')
-    ax2.set_ylabel('Time (seconds)')
-    ax2.set_title('Matrix Multiplication Performance\n(Log Scale)')
-    ax2.set_yscale('log')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.show()
-
-def print_results_table(times):
-    """Print a nicely formatted table of results."""
-    # Prepare table data
-    headers = ["Matrix Size", "CPU Time (s)", "GPU Time (s)", "Speedup", "Efficiency"]
-    rows = []
+if __name__ == "__main__":
+    # Warmup
+    print("Warming up...")
+    run_matmul(FastTensorBackend)
+    run_matmul(GPUBackend)
+    
+    ntrials = 3
+    times = {}
+    
+    print("\nRunning benchmarks...")
+    for size in [64, 128, 256, 512, 1024]:
+        print(f"\nRunning size {size}x{size}")
+        times[size] = {}
+        fast_times = []
+        gpu_times = []
+        
+        for trial in range(ntrials):
+            print(f"  Trial {trial + 1}/{ntrials}...", end=' ')
+            
+            start_fast = time.time()
+            run_matmul(FastTensorBackend, size)
+            end_fast = time.time()
+            
+            start_gpu = time.time()
+            run_matmul(GPUBackend, size)
+            end_gpu = time.time()
+            
+            fast_time = end_fast - start_fast
+            gpu_time = end_gpu - start_gpu
+            
+            fast_times.append(fast_time)
+            gpu_times.append(gpu_time)
+            print(f"CPU: {fast_time:.5f}s, GPU: {gpu_time:.5f}s")
+        
+        times[size]["fast"] = np.mean(fast_times)
+        times[size]["gpu"] = np.mean(gpu_times)
+        
+        print(f"  Average - CPU: {times[size]['fast']:.5f}s, GPU: {times[size]['gpu']:.5f}s")
+    
+    # Calculate speedups
+    speedups = calculate_speedup(times)
+    
+    print("\nTiming summary:")
+    print("Size".ljust(8) + "CPU (s)".ljust(15) + "GPU (s)".ljust(15) + "Speedup")
+    print("-" * 45)
     for size in times:
         cpu_time = times[size]["fast"]
         gpu_time = times[size]["gpu"]
-        speedup = cpu_time / gpu_time
-        # Efficiency = speedup / theoretical_max (using matrix size as proxy)
-        efficiency = (speedup / (size/64)) * 100  # normalized to smallest size
-        rows.append([
-            f"{size}x{size}",
-            f"{cpu_time:.6f}",
-            f"{gpu_time:.6f}",
-            f"{speedup:.2f}x",
-            f"{efficiency:.1f}%"
-        ])
-
-    # Print table
-    print("\nBenchmark Results:")
-    print(tabulate(rows, headers=headers, tablefmt="grid", floatfmt=".6f"))
-
-def run_benchmarks(sizes=[64, 128, 256, 512, 1024], ntrials=3):
-    """Run complete benchmark suite."""
-    print("Running benchmarks...")
-    times = {}
-
-    for size in sizes:
-        print(f"\nSize: {size}x{size}")
-        times[size] = {"fast": [], "gpu": []}
-
-        for trial in range(ntrials):
-            # CPU timing
-            start = time.perf_counter()
-            run_matmul(FastTensorBackend, size)
-            cpu_time = time.perf_counter() - start
-            times[size]["fast"].append(cpu_time)
-
-            # GPU timing
-            start = time.perf_counter()
-            run_matmul(GPUBackend, size)
-            gpu_time = time.perf_counter() - start
-            times[size]["gpu"].append(gpu_time)
-
-            print(f"  Trial {trial + 1}: CPU = {cpu_time:.6f}s, GPU = {gpu_time:.6f}s")
-
-        # Calculate averages
-        times[size]["fast"] = np.mean(times[size]["fast"])
-        times[size]["gpu"] = np.mean(times[size]["gpu"])
-
-    return times
-
-if __name__ == "__main__":
-    # Run warmup
-    print("Warming up...")
-    run_matmul(FastTensorBackend, 32)
-    run_matmul(GPUBackend, 32)
-
-    # Run benchmarks
-    times = run_benchmarks()
-
-    # Print and plot results
-    print_results_table(times)
+        speedup = speedups[size]
+        print(f"{size:<8}{cpu_time:<15.5f}{gpu_time:<15.5f}{speedup:.2f}x")
+    
+    # Plot results
     plot_results(times)
+    print("\nResults have been plotted to 'matmul_benchmark.png'")
