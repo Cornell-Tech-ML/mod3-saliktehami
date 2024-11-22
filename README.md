@@ -782,8 +782,6 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 ```bash
 !python project/run_fast_tensor.py --BACKEND cpu --HIDDEN 400 --DATASET xor --RATE 0.05
 ```
-
-```markdown
 | Epoch | Loss                 | Correct | Time per Epoch (s) | Total Time (s) |
 |-------|----------------------|---------|---------------------|----------------|
 |   0   | 30.065541015756175   | 32      | 12.458             | 12.458         |
@@ -839,7 +837,7 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 | Total |                      |         | 0.6634             | 331.6791       |
 **Total Time:** 331.6791 s
 **Epoch Duration:** 0.6634 s
-```
+
 
 ### GPU Results
 
@@ -900,8 +898,8 @@ tests/test_tensor_general.py::test_bmm[cuda] PASSED                             
 | 490   | 0.1443218627568265   | 50      | 2.1663             | 1063.6330      |
 **Total Time:** 1082.9967 s
 **Epoch Duration:** 2.166 s
-```
+
 
 ## Outputs
 
-Here is the link to the Colab Notebook: [Notebook](https://colab.research.google.com/drive/1ZHBRGdYs7AfHbMkOM33E2pk2_4PgLlFH?usp=sharing).
+Here is the link to the Colab [Notebook](https://colab.research.google.com/drive/1ZHBRGdYs7AfHbMkOM33E2pk2_4PgLlFH?usp=sharing).
